@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سیستم فرم فیزیولوژی</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Tahoma, sans-serif; background-color: #f4f7f6; }
+        .container-main { max-width: 1000px; margin-top: 30px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .hidden { display: none !important; }
+        .form-section { border-right: 4px solid #0d6efd; background: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px;}
+        h4, h5 { color: #0d6efd; margin-bottom: 15px;}
+    </style>
+</head>
+<body>
+    <div class="container-main" id="app">
+        <div id="auth-section">
+            <ul class="nav nav-tabs mb-4">
+                <li class="nav-item"><a class="nav-link active" onclick="switchAuthTab('login')">ورود</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="switchAuthTab('register')">ثبت نام دانشجو</a></li>
+            </ul>
+            <div id="login-tab">
+                <div class="mb-3"><input type="text" id="login_username" class="form-control" placeholder="کد ملی"></div>
+                <div class="mb-3"><input type="password" id="login_password" class="form-control" placeholder="رمز عبور"></div>
+                <button onclick="login()" class="btn btn-primary w-100">ورود</button>
+                <div id="login-msg" class="mt-2 text-danger text-center"></div>
+            </div>
+            <div id="register-tab" class="hidden">
+                <div class="mb-3"><input type="text" id="reg_username" class="form-control" placeholder="کد ملی"></div>
+                <div class="mb-3"><input type="password" id="reg_password" class="form-control" placeholder="رمز عبور"></div>
+                <button onclick="register()" class="btn btn-success w-100">ثبت نام</button>
+                <div id="reg-msg" class="mt-2 text-center"></div>
+            </div>
+        </div>
+
+        <div id="pending-section" class="hidden text-center"><h3 class="text-warning">در انتظار تایید استاد</h3><button onclick="logout()" class="btn btn-secondary">خروج</button></div>
+        <div id="rejected-section" class="hidden text-center"><h3 class="text-danger">ورود تایید نشد</h3><button onclick="logout()" class="btn btn-secondary">خروج</button></div>
+
+        <div id="student-section" class="hidden">
+            <div class="d-flex justify-content-between mb-4">
+                <h3>فرم فیزیولوژی</h3>
+                <div>
+                    <button onclick="showStudentTab('form')" class="btn btn-outline-primary btn-sm">فرم</button>
+                    <button onclick="showStudentTab('profile')" class="btn btn-outline-info btn-sm">تغییر رمز</button>
+                    <button onclick="logout()" class="btn btn-danger btn-sm">خروج</button>
+                </div>
+            </div>
+            <div id="student-form-view">
+                <div class="row mb-4">
+                    <div class="col-md-3"><input type="text" id="f_name" class="form-control" placeholder="نام و نام خانوادگی"></div>
+                    <div class="col-md-3"><select id="f_college" class="form-select"></select></div>
+                    <div class="col-md-3"><select id="f_major" class="form-select"></select></div>
+                    <div class="col-md-3"><select id="f_semester" class="form-select"></select></div>
+                </div>
+                <div id="form-content"></div>
+                <button onclick="submitForm()" class="btn btn-success w-100 mt-3">ثبت نهایی اطلاعات</button>
+            </div>
+            <div id="student-profile-view" class="hidden">
+                <input type="password" id="new_student_pass" class="form-control mb-2" placeholder="رمز جدید">
+                <button onclick="changeStudentPassword()" class="btn btn-primary">ذخیره تغییرات</button>
+            </div>
+        </div>
+
+        <div id="admin-section" class="hidden">
+            <div class="d-flex justify-content-between mb-4">
+                <h3>پنل مدیریت استاد</h3>
+                <button onclick="logout()" class="btn btn-danger">خروج</button>
+            </div>
+            <ul class="nav nav-tabs mb-3">
+                <li class="nav-item"><a class="nav-link active" onclick="showAdminTab('users')">مدیریت دانشجویان</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="showAdminTab('forms')">آمار و نتایج</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="showAdminTab('settings')">تنظیمات لیست‌ها</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="showAdminTab('admin-profile')">اکانت استاد</a></li>
+            </ul>
+            <div id="admin-users">
+                <table class="table table-bordered text-center">
+                    <thead><tr><th>کد ملی</th><th>رمز</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+                    <tbody id="users-table"></tbody>
+                </table>
+            </div>
+            <div id="admin-forms" class="hidden"><canvas id="myChart" style="max-height:300px"></canvas></div>
+            <div id="admin-settings" class="hidden">
+                <div class="row mb-3"><div class="col"><input type="text" id="new_college" class="form-control" placeholder="دانشکده جدید"></div><div class="col"><button onclick="addDict('college')" class="btn btn-primary">افزودن</button></div></div>
+                <div class="row mb-3"><div class="col"><input type="text" id="new_major" class="form-control" placeholder="رشته جدید"></div><div class="col"><button onclick="addDict('major')" class="btn btn-primary">افزودن</button></div></div>
+                <div class="row mb-3"><div class="col"><input type="text" id="new_semester" class="form-control" placeholder="نیمسال جدید"></div><div class="col"><button onclick="addDict('semester')" class="btn btn-primary">افزودن</button></div></div>
+            </div>
+            <div id="admin-profile" class="hidden">
+                <div class="mb-3"><input type="text" id="admin_new_user" class="form-control" placeholder="نام کاربری جدید"></div>
+                <div class="mb-3"><input type="password" id="admin_new_pass" class="form-control" placeholder="رمز جدید"></div>
+                <button onclick="changeAdminProfile()" class="btn btn-warning">بروزرسانی اکانت</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let dicts = { college: [], major: [], semester: [] };
+        const formStructure = [
+            { title: 'سیستم بینایی', fields: [ { id: 'q1', label: 'نقطه نزدیک بینایی (چشم راست/چپ)' }, { id: 'q2', label: 'رفلکس نور مردمک' }, { id: 'q3', label: 'نقطه کور' }, { id: 'q4', label: 'رفلکس نزدیک' }, { id: 'q5', label: 'تشخیص رنگ' } ]},
+            { title: 'سیستم شنوایی', fields: [ { id: 'q6', label: 'تست وبر' }, { id: 'q7', label: 'تست رینه' }, { id: 'q8', label: 'آستانه شنوایی' } ]},
+            { title: 'سیستم حسی پیکری', fields: [ { id: 'q9', label: 'تمایز دو نقطه' }, { id: 'q10', label: 'مکانیابی نقطه' }, { id: 'q11', label: 'استریوگنوزی' }, { id: 'q12', label: 'گرافستزی' } ]},
+            { title: 'تعادل و هماهنگی', fields: [ { id: 'q13', label: 'آزمون رومبرگ' }, { id: 'q14', label: 'راه رفتن تاندم' }, { id: 'q15', label: 'انگشت به بینی' } ]},
+            { title: 'رفلکس‌ها', fields: [ { id: 'q16', label: 'رفلکس زانو' }, { id: 'q17', label: 'توهم شارپانتیه' }, { id: 'q18', label: 'خطای مولر-لایر' } ]}
+        ];
+
+        const formContent = document.getElementById('form-content');
+        formStructure.forEach(section => {
+            let html = `<div class="form-section"><h5>${section.title}</h5>`;
+            section.fields.forEach(f => { html += `<div class="mb-2"><label class="form-label">${f.label}</label><input type="text" class="form-control form-control-sm" id="${f.id}"></div>`; });
+            html += '</div>'; formContent.innerHTML += html;
+        });
+
+        function switchAuthTab(t) {
+            document.querySelectorAll('.nav-link').forEach(e => e.classList.remove('active'));
+            document.getElementById('login-tab').classList.add('hidden');
+            document.getElementById('register-tab').classList.add('hidden');
+            document.getElementById(t + '-tab').classList.remove('hidden');
+            event.target.classList.add('active');
+        }
+
+        async function apiCall(endpoint, data = null) {
+            const res = await fetch('/api/' + endpoint, {
+                method: data ? 'POST' : 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                body: data ? JSON.stringify(data) : null
+            });
+            return res.json();
+        }
+
+        async function login() {
+            const u = document.getElementById('login_username').value;
+            const p = document.getElementById('login_password').value;
+            const res = await apiCall('login', { username: u, password: p });
+            if (res.error) { document.getElementById('login-msg').innerText = res.error; return; }
+            currentUser = res; checkState();
+        }
+
+        async function register() {
+            const u = document.getElementById('reg_username').value;
+            const p = document.getElementById('reg_password').value;
+            if(!u || !p) { document.getElementById('reg-msg').innerText = 'فیلدها را پر کنید'; return; }
+            const res = await apiCall('register', { username: u, password: p });
+            if(res.error) { document.getElementById('reg-msg').className = 'text-danger text-center mt-2'; document.getElementById('reg-msg').innerText = res.error; }
+            else { document.getElementById('reg-msg').className = 'text-success text-center mt-2'; document.getElementById('reg-msg').innerText = 'ثبت نام موفق! منتظر تایید استاد بمانید.'; setTimeout(() => switchAuthTab('login'), 2000); }
+        }
+
+        async function logout() { location.reload(); }
+
+        async function checkState() {
+            if (!currentUser) { document.getElementById('auth-section').classList.remove('hidden'); return; }
+            document.getElementById('auth-section').classList.add('hidden');
+            if (currentUser.role === 'admin') {
+                document.getElementById('admin-section').classList.remove('hidden');
+                document.getElementById('admin_new_user').value = currentUser.username;
+                loadAdminData();
+            } else {
+                if (currentUser.status === 'pending') document.getElementById('pending-section').classList.remove('hidden');
+                else if (currentUser.status === 'rejected') document.getElementById('rejected-section').classList.remove('hidden');
+                else if (currentUser.status === 'approved') { document.getElementById('student-section').classList.remove('hidden'); loadDicts(); }
+            }
+        }
+
+        async function loadDicts() {
+            dicts = await apiCall('dicts');
+            const p = (id, arr, t) => { const el = document.getElementById(id); el.innerHTML = `<option value="">${t}</option>` + arr.map(a => `<option value="${a}">${a}</option>`).join(''); };
+            p('f_college', dicts.college, 'دانشکده...'); p('f_major', dicts.major, 'رشته...'); p('f_semester', dicts.semester, 'نیمسال...');
+        }
+
+        function showStudentTab(t) {
+            document.getElementById('student-form-view').classList.add('hidden');
+            document.getElementById('student-profile-view').classList.add('hidden');
+            document.getElementById('student-' + t + '-view').classList.remove('hidden');
+        }
+
+        async function submitForm() {
+            const data = { name: document.getElementById('f_name').value, college: document.getElementById('f_college').value, major: document.getElementById('f_major').value, semester: document.getElementById('f_semester').value, answers: {} };
+            formStructure.forEach(s => s.fields.forEach(f => { data.answers[f.id] = document.getElementById(f.id).value; }));
+            await apiCall('submit', { student_id: currentUser.id, data: data });
+            alert('فرم با موفقیت ثبت شد.');
+        }
+
+        async function changeStudentPassword() {
+            const n = document.getElementById('new_student_pass').value;
+            if(!n) return alert('رمز جدید را وارد کنید');
+            await apiCall('change-password', { id: currentUser.id, new_password: n });
+            alert('رمز عبور تغییر یافت.'); document.getElementById('new_student_pass').value = '';
+        }
+
+        async function loadAdminData() {
+            const users = await apiCall('admin/users');
+            const tbody = document.getElementById('users-table'); tbody.innerHTML = '';
+            users.forEach(u => {
+                let statusBtn = '';
+                if (u.status === 'pending') statusBtn = `<button onclick="changeStatus(${u.id}, 'approved')" class="btn btn-sm btn-success">تایید</button> <button onclick="changeStatus(${u.id}, 'rejected')" class="btn btn-sm btn-danger">رد</button>`;
+                else if (u.status === 'approved') statusBtn = `<button onclick="changeStatus(${u.id}, 'rejected')" class="btn btn-sm btn-warning">لغو تایید</button>`;
+                else if (u.status === 'rejected') statusBtn = `<button onclick="changeStatus(${u.id}, 'approved')" class="btn btn-sm btn-success">تایید مجدد</button>`;
+                tbody.innerHTML += `<tr><td>${u.username}</td><td><span class="badge bg-secondary">${u.password}</span></td><td>${u.status}</td><td>${statusBtn}</td></tr>`;
+            });
+            const forms = await apiCall('admin/forms'); renderChart(forms);
+        }
+
+        async function changeStatus(id, status) { await apiCall('admin/user-status', { id, status }); loadAdminData(); }
+
+        function showAdminTab(tab) {
+            document.getElementById('admin-users').classList.add('hidden'); document.getElementById('admin-forms').classList.add('hidden');
+            document.getElementById('admin-settings').classList.add('hidden'); document.getElementById('admin-profile').classList.add('hidden');
+            document.getElementById('admin-' + tab).classList.remove('hidden');
+            document.querySelectorAll('#admin-section .nav-link').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        async function addDict(type) {
+            let val = document.getElementById('new_' + type).value; if(!val) return;
+            await apiCall('admin/add-dict', { type, value: val }); document.getElementById('new_' + type).value = ''; alert('اضافه شد');
+        }
+
+        async function changeAdminProfile() {
+            const newUser = document.getElementById('admin_new_user').value; const newPass = document.getElementById('admin_new_pass').value;
+            if(!newUser || !newPass) return alert('هر دو فیلد را پر کنید');
+            const res = await apiCall('admin/update-profile', { id: currentUser.id, username: newUser, password: newPass });
+            if(res.success) { alert('بروزرسانی شد. دوباره وارد شوید.'); logout(); } else alert('خطا: ' + res.error);
+        }
+
+        function renderChart(forms) {
+            const ctx = document.getElementById('myChart').getContext('2d');
+            const labels = forms.map(f => f.name || ('فرم ' + f.id));
+            const data = forms.map(f => Object.values(JSON.parse(f.data).answers).filter(v => v !== '').length);
+            if(window.myChartInstance) window.myChartInstance.destroy();
+            window.myChartInstance = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'تعداد فیلدهای تکمیل شده', data: data, backgroundColor: 'rgba(13, 110, 253, 0.6)' }] }, options: { responsive: true, maintainAspectRatio: false } });
+        }
+        checkState();
+    </script>
+</body>
+</html>
